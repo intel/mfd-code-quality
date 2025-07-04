@@ -1,0 +1,6 @@
+[lint]
+select = ["D", "W", "E", "ANN", "F", "A"]
+
+ignore = ["D105", "D412", "D413", "ANN101", "ANN002", "ANN204", "ANN003", "ANN401", "E203", "D212", "D213", "D203"]
+
+exclude = ["mfd_connect/util/ansiterm.py"]

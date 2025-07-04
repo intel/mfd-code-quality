@@ -1,0 +1,48 @@
+[build-system]
+requires = [
+    "setuptools>=80.4.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+dependencies = { file = ["requirements.txt"] }
+
+[project]
+name = "mfd-code-quality"
+description = "Module for a code quality related scripts."
+requires-python = ">=3.10, <3.14"
+version = "1.0.3"
+dynamic = ["readme", "dependencies"]
+license-files = ["LICEN[CS]E*", "AUTHORS.md"]
+
+[project.urls]
+Homepage = "https://github.com/intel/mfd"
+Repository = "https://github.com/intel/mfd-code-quality"
+Issues = "https://github.com/intel/mfd-code-quality/issues"
+Changelog = "https://github.com/intel/mfd-code-quality/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+exclude = ["examples", "tests*", "sphinx-doc"]
+
+[project.scripts]
+mfd-code-standard = "mfd_code_quality.code_standard.checks:run_checks"
+mfd-import-testing = "mfd_code_quality.testing_utilities.import_testing:run_checks"
+mfd-system-tests = "mfd_code_quality.testing_utilities.system_tests:run_checks"
+mfd-unit-tests = "mfd_code_quality.testing_utilities.unit_tests:run_unit_tests"
+mfd-unit-tests-with-coverage = "mfd_code_quality.testing_utilities.unit_tests:run_unit_tests_with_coverage"
+mfd-all-checks = "mfd_code_quality.mfd_code_quality:run_all_checks"
+mfd-format-code = "mfd_code_quality.code_standard.formats:format_code"
+mfd-help = "mfd_code_quality.mfd_code_quality:log_help_info"
+mfd-configure-code-standard = "mfd_code_quality.code_standard.configure:configure_code_standard"
+mfd-create-config-files = "mfd_code_quality.code_standard.configure:create_config_files"
+mfd-delete-config-files = "mfd_code_quality.code_standard.configure:delete_config_files"
+
+[tool.setuptools.package-data]
+"mfd_code_quality.code_standard" = [
+    ".pre-commit-config.yaml",
+    "generic_pyproject.txt",
+    "generic_ruff.txt",
+    "config_per_module/*.toml"
+]
