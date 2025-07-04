@@ -1,0 +1,17 @@
+[tool.coverage.run]
+source_pkgs = ["{{ mfd_module_name }}"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+]
+
+[tool.semantic_release]
+allow_zero_version = true
+tag_format = "v{version}"
+version_toml = ["pyproject.toml:project.version"]
+version_source = "tag"
+
+[tool.semantic_release.branches.main]
+match = ".*"

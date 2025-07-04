@@ -1,0 +1,10 @@
+[tool.coverage.run]
+
+[tool.coverage.report]
+
+[tool.semantic_release]
+version_variable = "VERSION:__version__"
+version_source = "tag"
+
+[tool.semantic_release.branches.main]
+match = ".*"
