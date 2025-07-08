@@ -63,6 +63,7 @@ on:
 jobs:
   build_whl:
     permissions:
+      contents: write
       id-token: write
     environment:
       name: "pypi"
@@ -103,9 +104,12 @@ jobs:
           version_from_tag=$(git describe --tags --abbrev=0 | tr -d '\n' | sed 's/^v//')
           echo "Version after semantic-release bump is: ${version_after_bump}"
           echo "Version from tag: ${version_from_tag}"
-          if [ "$version_after_bump" == "$version_from_tag" ]; then
-            echo "Version would not change: version_after_bump=${version_after_bump}, version_from_tag=${version_from_tag}"
-            exit 1
+          # Only check version equality if RELEASE_BUILD is true
+          if [ "${{ inputs.RELEASE_BUILD }}" == "true" ]; then
+            if [ "$version_after_bump" == "$version_from_tag" ]; then
+              echo "Version would not change: version_after_bump=${version_after_bump}, version_from_tag=${version_from_tag}"
+              exit 1
+            fi
           fi
           semantic-release version --no-push --no-vcs-release
           cat pyproject.toml
@@ -124,8 +128,9 @@ jobs:
         id: test_check
         shell: bash
         run: |
-          # Extract repo name from PROJECT_NAME (format: org/repo)
-          REPO_NAME=$(echo "${{ inputs.PROJECT_NAME }}" | awk -F'/' '{print $2}')
+          REPO_NAME=$(echo "${{ inputs.PROJECT_NAME }}")
+          echo "Repository name extracted: $REPO_NAME"
+
           UNIT_TEST_DIR="${{ inputs.SOURCE_PATH }}/tests/unit/test_$(echo "${REPO_NAME}" | tr '-' '_')"
           FUNC_TEST_DIR="${{ inputs.SOURCE_PATH }}/tests/system/test_$(echo "${REPO_NAME}" | tr '-' '_')"
           if [ -d "$UNIT_TEST_DIR" ]; then
@@ -169,7 +174,7 @@ jobs:
         if: ${{ inputs.RELEASE_BUILD == true && inputs.UPLOAD_PACKAGE == true }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: 'whl_creation/dist/*.whl'
+          packages-dir: 'whl_creation/dist'
           password: ${{ secrets.PYPI_TOKEN }}
 
       - name: Publish comment how to build .whl
