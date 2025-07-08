@@ -6,14 +6,13 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-
 dependencies = { file = ["requirements.txt"] }
 
 [project]
 name = "mfd-code-quality"
 description = "Module for a code quality related scripts."
 requires-python = ">=3.10, <3.14"
-version = "1.1.1"
+version = "1.2.0"
 dynamic = ["dependencies"]
 license-files = ["LICENSE.md", "AUTHORS.md"]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -47,3 +46,20 @@ mfd-delete-config-files = "mfd_code_quality.code_standard.configure:delete_confi
     "generic_ruff.txt",
     "config_per_module/*.toml"
 ]
+[tool.coverage.run]
+source_pkgs = ["mfd_code_quality"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+]
+
+[tool.semantic_release]
+allow_zero_version = true
+tag_format = "v{version}"
+version_toml = ["pyproject.toml:project.version"]
+version_source = "tag"
+
+[tool.semantic_release.branches.main]
+match = ".*"
