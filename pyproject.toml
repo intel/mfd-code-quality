@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
+
 dependencies = { file = ["requirements.txt"] }
 
 [project]
@@ -14,8 +14,9 @@ name = "mfd-code-quality"
 description = "Module for a code quality related scripts."
 requires-python = ">=3.10, <3.14"
 version = "1.1.0"
-dynamic = ["readme", "dependencies"]
+dynamic = ["dependencies"]
 license-files = ["LICEN[CS]E*", "AUTHORS.md"]
+readme = {file = "README.md", content-type = "text/markdown"}
 
 [project.urls]
 Homepage = "https://github.com/intel/mfd"
