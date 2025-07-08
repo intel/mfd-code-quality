@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.1.0 (2025-07-08)
+## v1.1.1 (2025-07-08)
 
 ### Continuous Integration
 
