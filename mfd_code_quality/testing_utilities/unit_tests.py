@@ -3,6 +3,7 @@
 """Unit tests utilities."""
 
 import logging
+import os
 import shutil
 import sys
 
@@ -37,7 +38,7 @@ def _run_unit_tests(compare_coverage: bool = False, with_configs: bool = True) -
     if with_configs:
         create_config_files()
     root_dir = get_root_dir()
-
+    logger.debug(f"[Unit tests] Sys path: {sys.path}")
     (root_dir / ".coverage").unlink(missing_ok=True)  # sqlite db created by coverage
     (root_dir / COVERAGE_XML_FILE).unlink(missing_ok=True)
     (root_dir / COVERAGE_JSON_FILE).unlink(missing_ok=True)
@@ -52,10 +53,11 @@ def _run_unit_tests(compare_coverage: bool = False, with_configs: bool = True) -
     unit_tests_path = str(root_dir / "tests" / "unit")
     params = ["-n 5", f"--cov={package_name}", unit_tests_path]
 
+    logger.debug(f"[Unit tests] Running pytest with params: {params}")
     cov = Coverage(source_pkgs=[package_name])
     with cov.collect():
         testing_run_outcome = pytest.main(args=params)
-
+    logger.debug(f"[Unit tests] List files: {os.listdir(root_dir)}")
     return_val = testing_run_outcome in PYTEST_OK_STATUSES
 
     with coverage_section():
@@ -63,7 +65,8 @@ def _run_unit_tests(compare_coverage: bool = False, with_configs: bool = True) -
             cov.load()
             cov.json_report(outfile=COVERAGE_JSON_FILE)
             log_module_coverage()
-        except NoDataError:
+        except NoDataError as e:
+            logger.error(f"[Coverage] No data collected: {e}")
             logger.warning("[Coverage] Coverage did not collect any data. Probably there are no unit tests.")
             return return_val
 
