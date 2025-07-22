@@ -31,25 +31,33 @@ class TestCodeStandard:
         mock_run = setup_and_teardown
         mock_run.return_value = MagicMock(returncode=0)
         assert _run_linter() is True
-        mock_run.assert_called_once_with((sys.executable, "-m", "ruff", "check", "--fix"), cwd="/mocked/path")
+        mock_run.assert_called_once_with(
+            (sys.executable, "-m", "ruff", "check", "--fix"), capture_output=True, text=True, cwd="/mocked/path"
+        )
 
     def test_run_linter_failure(self, setup_and_teardown):
         mock_run = setup_and_teardown
         mock_run.return_value = MagicMock(returncode=1)
         assert _run_linter() is False
-        mock_run.assert_called_once_with((sys.executable, "-m", "ruff", "check", "--fix"), cwd="/mocked/path")
+        mock_run.assert_called_once_with(
+            (sys.executable, "-m", "ruff", "check", "--fix"), capture_output=True, text=True, cwd="/mocked/path"
+        )
 
     def test_run_formatter_success(self, setup_and_teardown):
         mock_run = setup_and_teardown
         mock_run.return_value = MagicMock(returncode=0)
         assert _run_formatter() is True
-        mock_run.assert_called_once_with((sys.executable, "-m", "ruff", "format"), cwd="/mocked/path")
+        mock_run.assert_called_once_with(
+            (sys.executable, "-m", "ruff", "format"), capture_output=True, text=True, cwd="/mocked/path"
+        )
 
     def test_run_formatter_failure(self, setup_and_teardown):
         mock_run = setup_and_teardown
         mock_run.return_value = MagicMock(returncode=1)
         assert _run_formatter() is False
-        mock_run.assert_called_once_with((sys.executable, "-m", "ruff", "format"), cwd="/mocked/path")
+        mock_run.assert_called_once_with(
+            (sys.executable, "-m", "ruff", "format"), capture_output=True, text=True, cwd="/mocked/path"
+        )
 
     def test_format_code_success(self, setup_and_teardown):
         mock_run = setup_and_teardown

@@ -3,7 +3,7 @@ pytest-cov ~= 5.0.0
 pytest-xdist ~= 3.6.1
 coverage ~= 7.3.0
 diff-cover >= 8.0.3, < 9
-pre-commit
+ansicolors~=1.1
 
 ruff == 0.4.7
 setuptools
