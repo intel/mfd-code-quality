@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock
 from mfd_code_quality.utils import (
     CustomFilter,
     set_up_basic_config,
-    set_up_logging,
     get_parsed_args,
     get_root_dir,
     set_cwd,
@@ -22,7 +21,7 @@ def test_check_if_log_message_is_from_module(mocker):
     mocker.patch("mfd_code_quality.utils.logging.Filter.filter", return_value=True)
     custom_filter = CustomFilter()
     record = MagicMock()
-    record.name = "mfd_code_quality.utils"
+    record.name = "mfd-code-quality.utils"
     assert custom_filter.filter(record)
 
 
@@ -30,22 +29,14 @@ def test_set_up_basic_logging_config(mocker):
     mock_basic_config = mocker.patch("mfd_code_quality.utils.logging.basicConfig")
     set_up_basic_config(logging.DEBUG)
     mock_basic_config.assert_called_with(
-        level=logging.DEBUG, format="%(asctime)s | %(name)35.35s | %(levelname)5.5s | %(msg)s"
+        level=logging.DEBUG, format="%(asctime)s | %(name)13.13s | %(levelname)4.4s | ", datefmt="%H:%M:%S"
     )
-
-
-def test_set_up_logging_to_print_only_logs_from_this_file(mocker):
-    mock_set_up_basic_config = mocker.patch("mfd_code_quality.utils.set_up_basic_config")
-    mock_get_logger = mocker.patch("mfd_code_quality.utils.logging.getLogger")
-    mock_handler = MagicMock()
-    mock_get_logger.return_value.handlers = [mock_handler]
-    set_up_logging()
-    mock_set_up_basic_config.assert_called_once_with(log_level=logging.DEBUG)
 
 
 def test_get_parsed_command_line_arguments(mocker):
     mock_parse_args = mocker.patch("mfd_code_quality.utils.ArgumentParser.parse_args")
     mock_parse_args.return_value = Namespace(project_dir="/path/to/project")
+    get_parsed_args.cache_clear()  # Clear lru cache
     args = get_parsed_args()
     assert args.project_dir == "/path/to/project"
 

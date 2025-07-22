@@ -1,5 +1,5 @@
 [tool.coverage.run]
-source_pkgs = ["{{ mfd_module_name }}"]
+source_pkgs = ["{{ module_name }}"]
 
 [tool.coverage.report]
 exclude_also = [

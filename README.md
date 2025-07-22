@@ -3,58 +3,67 @@
 
 # MFD Code Quality
 
+This module provides a set of methods for checking code quality.\
+**Along with the module installation, additional CLI tools appear in your environment.**
+
 ## Usage
 
-This module provides set of code quality related methods with corresponding command line commands.
+![](docs/code_quality_demo.gif)
+
+When installing `mfd-code-quality` package all the commands from table below will become available from command-line.\
+So you can just type i.e. `mfd-help` in your terminal without a need to call it from Python.\
+If command requires configuration, the config file will be automatically created and removed after execution.
 
 ### Available commands
 
-When installing `mfd-code-quality` package all these commands will become available from command line - in the same way as `pip` for example.\
-So you can just type `mfd-help` in your terminal without a need to call it from Python.
+| Command                        | Description                                                                                   |
+|--------------------------------|-----------------------------------------------------------------------------------------------|
+| `mfd-help`                     | Log available commands.                                                                       |
+| `mfd-code-standard`            | Check code standard using Ruff (`format`, `check`) or flake8. Depending on what is available. |
+| `mfd-code-format`              | Format code using `ruff check --fix` and `ruff format`.                                       |
+| `mfd-import-tests`             | Try to import each Python file to check import problems.                                      |
+| `mfd-system-tests`             | Run system tests.                                                                             |
+| `mfd-unit-tests`               | Run unit tests.                                                                               |
+| `mfd-unit-tests-with-coverage` | Run unittests and check if diff coverage (new code coverage) is reaching the threshold (**80%**). |
+| `mfd-all-checks`               | Run all available checks.                                                                     |
 
+### Available arguments (for all commands)
 
-> `mfd-configure-code-standard`\
-> Prepare code standard configuration files into repository and setup pre commit.
+* `-p` / `--project-dir` - path to the root directory (default: current working directory)
 
-> `mfd-create-config-files`\
-> Prepare code standard configuration files into repository without setup of pre commit.\
-> Mechanism of creating configs is the same as in 'mfd-configure-code-standard'.
+* `-v` / `--verbose` - enable verbose output
 
-> `mfd-code-standard`\
-Run code standard test using ruff (format, check) or flake8. Depending on what is available. It copies configuration files before code standard check and remove their after check.
-> It's not required to call `mfd-configure-code-standard` or `mfd-create-config-files` before running this command.
-
-> `mfd-import-testing`\
-Run import testing of each Python file to check import problems.
-
-> `mfd-system-tests`\
-Run system tests.
-
-> `mfd-unit-tests`\
-Run unittests, print actual coverage, but don't check its value.
-
-> `mfd-unit-tests-with-coverage`\
-Run unittests and check if diff coverage (new code coverage) is reaching the threshold.
-
-> `mfd-all-checks`\
-Run all available checks.
-
-> `mfd-help`\
-Log available commands.
-
-> `mfd-format-code`\
-Format code using ruff check --fix and ruff format
-
-All commands can be combined with `--project-dir` parameter, which should point to the root directory of your repository.
-If this parameter is not given current working directory will be assumed to be root directory.
+> [!NOTE]
+> All commands are expected to be run from the root directory of the project.\
+> Recommended file structure:
+> ```
+> <project>
+> ├── <package>
+> │   ├── __init__.py
+> │   ├── ...
+> ├── tests
+> │   ├── system
+> │   │   ├── __init__.py
+> │   │   └── ...
+> │   ├── unit
+> │   │   ├── __init__.py
+> │   │   └── ...
+> │   └── __init__.py
+> ├── pyproject.toml
+> ├── README.md
+> └── ...
+> ```
 
 ### Configuration files
-We are using 3 configuration files:
-- `ruff.toml` - for ruff configuration
-- `pyproject.toml` - for project/generic configuration
-- `.pre-commit-config.yaml` - for pre-commit configuration
+
+We are using 2 configuration files (created/modified/removed automatically):
+
+* `ruff.toml` - for ruff configuration
+
+* `pyproject.toml` - for project/generic configuration
 
 ### Custom configuration
+
 Some modules have custom configuration files. Files are stored in `mfd_code_quality/code_standard/config_per_module` directory. Configuration files are merged with generic one during configuration process.
 
 ## OS supported:

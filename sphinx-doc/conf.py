@@ -39,7 +39,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "MFD Code Quality"
-project_copyright = """Copyright (C) 2025 Intel Corporation 
+project_copyright = """Copyright (C) 2025 Intel Corporation
 SPDX-License-Identifier: MIT"""
 copyright = project_copyright  # noqa
 author = "Intel Corporation"

@@ -6,6 +6,7 @@ import pytest
 
 PYTEST_OK_STATUSES = [pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED]
 
+# Berta - not open-sourced yet
 BERTA_IMPORTS = {
     "wrappers",
     "utils",
