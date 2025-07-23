@@ -19,16 +19,13 @@ import logging
 import os
 import pathlib
 import re
-import shutil
-import subprocess
-import sys
 from codecs import open as codec_open
 
 from jinja2 import Template
 
-from mfd_code_quality.utils import set_up_logging, get_root_dir
+from mfd_code_quality.utils import set_up_logging, get_root_dir, get_package_name
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mfd-code-quality.configure")
 
 
 class ToolConfig:
@@ -75,7 +72,7 @@ def _read_config_content(config_file_path: pathlib.Path) -> list[ToolConfig]:
     :param config_file_path: .toml file path.
     :return: List of ToolConfig.
     """
-    logger.info(f"Read content of config file: {config_file_path}")
+    logger.debug(f"Read content of config file: {config_file_path}")
 
     tool_config_list = []
     tool_config = None
@@ -114,75 +111,18 @@ def _read_config_content(config_file_path: pathlib.Path) -> list[ToolConfig]:
     return tool_config_list
 
 
-def configure_pre_commit() -> None:
-    """Configure pre-commit hooks."""
-    logger.info("Configure pre-commit hooks")
-
-    pre_commit_version = subprocess.run(["pre-commit", "--version"], check=True, capture_output=True, text=True).stdout
-    logger.info(f"pre-commit version: {pre_commit_version}")
-
-    python_version = subprocess.run([sys.executable, "--version"], check=True, capture_output=True, text=True).stdout
-    logger.info(f"python version: {python_version}")
-
-    output = subprocess.run(["pre-commit", "install"], check=True, capture_output=True, text=True).stdout
-    logger.info(output)
-
-
-def _copy_common_files(script_path: pathlib.Path, destination_path: pathlib.Path) -> None:
+def _get_module_name(destination_path: pathlib.Path) -> str:
     """
-    Copy files to destined path.
-
-    :param script_path: configure.py path in site-packages
-    :param destination_path: root's directory in repository
-    """
-    common_files = [
-        pathlib.Path(script_path, ".pre-commit-config.yaml"),
-    ]
-
-    for common_file in common_files:
-        logger.info(f"Copy: {common_file}")
-        dest = str(destination_path.joinpath(common_file.name))
-        shutil.copy2(str(common_file), dest)
-        if "pre-commit-config.yaml" in str(common_file):
-            _substitute_pre_commit_hook_file(dest)
-
-
-def _remove_common_files(destination_path: pathlib.Path) -> None:
-    """
-    Remove common files from destination path.
+    Get Python package name.
 
     :param destination_path: Repository's root directory.
+    :return: Python package name.
+    :raises Exception: When Python package name couldn't be found.
     """
-    common_files = [
-        ".pre-commit-config.yaml",
-    ]
+    if any(re.match(r"{{.+}}", file.name) for file in destination_path.iterdir()):  # cookiecutter template
+        return _get_template_repo_name(destination_path)
 
-    for common_file in common_files:
-        file_path = destination_path.joinpath(common_file)
-        if file_path.exists():
-            logger.info(f"Remove: {file_path}")
-            file_path.unlink()
-
-
-def _get_mfd_module_name(destination_path: pathlib.Path) -> str:
-    """
-    Get MFD repository name.
-
-    :param destination_path: Repository's root directory.
-    :return: MFD repository name.
-    :raises Exception: When MFD repository name couldn't be found.
-    """
-    root_directory_file_list = destination_path.iterdir()
-
-    for directory in root_directory_file_list:
-        if directory.is_dir():
-            match = re.search(r"(?P<mfd_module_name>^((pytest_)*mfd_.*)|({{.*}}))", directory.name)
-            if match:
-                if "{{" in match.group("mfd_module_name"):  # cookiecutter template
-                    return _get_template_repo_name(destination_path)
-                return match.group("mfd_module_name")
-
-    raise Exception("Script was not run in MFD repository!")
+    return get_package_name(destination_path)
 
 
 def _get_template_repo_name(destination_path: pathlib.Path) -> str:
@@ -201,7 +141,7 @@ def _get_template_repo_name(destination_path: pathlib.Path) -> str:
         return repo_name
 
     logger.debug(f"Repo name not found in {destination_path}")
-    raise Exception("Script was not run in MFD repository!")
+    raise Exception("Script was probably not run in template repository!")
 
 
 def _create_unified_tool_config_list(tool_config_lists: list[list[ToolConfig]]) -> list[ToolConfig]:
@@ -230,7 +170,7 @@ def _create_toml_file(unified_tool_config_list: list[ToolConfig], toml_file_path
     :param unified_tool_config_list: Unified list with tool configs from generic and custom .toml files
     :param toml_file_path: Generated .toml file path
     """
-    logger.info(f"Create .toml file in path: {toml_file_path}")
+    logger.debug(f"Create .toml file in path: {toml_file_path}")
 
     with codec_open(toml_file_path, "w", "utf-8") as f:
         first_section = True
@@ -257,7 +197,7 @@ def _remove_toml_file(toml_file_path: str) -> None:
 
     :param toml_file_path: .toml file path
     """
-    logger.info(f"Remove .toml file in path: {toml_file_path}")
+    logger.debug(f"Remove .toml file in path: {toml_file_path}")
     if os.path.exists(toml_file_path):
         os.remove(toml_file_path)
 
@@ -268,44 +208,22 @@ def _substitute_toml_file(toml_file_path: str) -> None:
 
     :param toml_file_path: Generated .toml file path
     """
-    logger.info(f"Substitute .toml file in path: {toml_file_path}")
+    logger.debug(f"Substitute .toml file in path: {toml_file_path}")
 
     with codec_open(toml_file_path, "rt") as f:
         template = Template(f.read())
 
     toml_path = pathlib.Path(toml_file_path)
-    mfd_module_name = _get_mfd_module_name(toml_path.parent)
+    module_name = _get_module_name(toml_path.parent)
 
-    if "_template" in mfd_module_name:
-        logger.info("Template repository, Cookiecutter found in module name, skipping substitution")
+    if "_template" in module_name:
+        logger.debug("Template repository, Cookiecutter found in module name, skipping substitution")
         return
 
-    substitutions = {"mfd_module_name": mfd_module_name}
+    substitutions = {"module_name": module_name}
     rendered_template = template.render(substitutions)
 
     with codec_open(toml_file_path, "wt") as f:
-        f.writelines(rendered_template)
-
-
-def _substitute_pre_commit_hook_file(yaml_file_path: pathlib.Path | str) -> None:
-    """
-    Substitute .toml file with repos specific fields.
-
-    :param yaml_file_path: Generated .toml file path
-    """
-    logger.info(f"Substitute .yaml file in path: {yaml_file_path}")
-
-    with codec_open(yaml_file_path, "rt") as f:
-        template = Template(f.read())
-
-    from importlib.metadata import version as pkg_version
-
-    mfd_code_quality_version = pkg_version("mfd_code_quality")
-
-    substitutions = {"version": mfd_code_quality_version}
-    rendered_template = template.render(substitutions)
-
-    with codec_open(yaml_file_path, "wt") as f:
         f.writelines(rendered_template)
 
 
@@ -320,24 +238,24 @@ def create_toml_files(cwd: pathlib.Path, pwd: pathlib.Path, custom_config_name: 
     """
     config_lists = []
     custom_config_path = None
-    module_name = _get_mfd_module_name(cwd)
+    module_name = _get_module_name(cwd)
     repo_config_path = pathlib.Path(cwd, custom_config_name)
     if repo_config_path.is_file():
-        logger.info(f"Repo {custom_config_name} file exists.")
+        logger.debug(f"Repo {custom_config_name} file exists.")
         repo_tool_config_list = _read_config_content(repo_config_path)
         config_lists.append(repo_tool_config_list)
 
     if module_name in config_per_module_list:
         custom_config_path = pathlib.Path(pwd, "config_per_module", f"{module_name}_{custom_config_name}")
-        logger.info(f"Custom {custom_config_name} path: {custom_config_path}")
+        logger.debug(f"Custom {custom_config_name} path: {custom_config_path}")
 
     generic_config_path = pathlib.Path(pwd, generic_config_name)
-    logger.info(f"Generic {generic_config_name} path: {generic_config_path}")
+    logger.debug(f"Generic {generic_config_name} path: {generic_config_path}")
 
     generic_tool_config_list = _read_config_content(generic_config_path)
     config_lists.append(generic_tool_config_list)
     if custom_config_path and custom_config_path.is_file():
-        logger.info(f"Custom {custom_config_name} file exists.")
+        logger.debug(f"Custom {custom_config_name} file exists.")
         custom_ruff_config_list = _read_config_content(custom_config_path)
         config_lists.append(custom_ruff_config_list)
 
@@ -348,35 +266,16 @@ def create_toml_files(cwd: pathlib.Path, pwd: pathlib.Path, custom_config_name: 
     _substitute_toml_file(toml_file_path)
 
 
-def configure_code_standard() -> None:
-    """Configure repository for coding standard checks."""
-    set_up_logging()
-    cwd = get_root_dir()
-    pwd = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
-
-    logger.info("Step 1/4 - Copy common files.")
-    _copy_common_files(pwd, cwd)
-
-    logger.info("Step 2/4 - Create pyproject.toml file.")
-    create_toml_files(cwd, pwd, "pyproject.toml", "generic_pyproject.txt")
-
-    logger.info("Step 3/4 - Create ruff.toml file.")
-    create_toml_files(cwd, pwd, "ruff.toml", "generic_ruff.txt")
-
-    logger.info("Step 4/4 - Configure pre commit hooks..")
-    configure_pre_commit()
-
-
 def create_config_files() -> None:
     """Create config files pyproject.toml and ruff.toml."""
     set_up_logging()
     cwd = get_root_dir()
     pwd = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
-    logger.info("Step 1/2 - Create pyproject.toml file.")
+    logger.debug("Step 1/2 - Create pyproject.toml file.")
     create_toml_files(cwd, pwd, "pyproject.toml", "generic_pyproject.txt")
 
-    logger.info("Step 2/2 - Create ruff.toml file.")
+    logger.debug("Step 2/2 - Create ruff.toml file.")
     create_toml_files(cwd, pwd, "ruff.toml", "generic_ruff.txt")
 
 
@@ -386,10 +285,10 @@ def delete_config_files() -> None:
     cwd = get_root_dir()
     pwd = pathlib.Path(os.path.abspath(os.path.dirname(__file__)))
 
-    logger.info("Step 1/2 - Remove pyproject.toml")
+    logger.debug("Step 1/2 - Remove pyproject.toml")
     cleanup_toml_file(cwd, pwd, "pyproject.toml", "generic_pyproject.txt")
 
-    logger.info("Step 2/2 - Remove ruff.toml")
+    logger.debug("Step 2/2 - Remove ruff.toml")
     _remove_toml_file(os.path.join(cwd, "ruff.toml"))
 
 
