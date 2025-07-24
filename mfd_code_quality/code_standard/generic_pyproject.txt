@@ -12,6 +12,9 @@ allow_zero_version = true
 tag_format = "v{version}"
 version_toml = ["pyproject.toml:project.version"]
 version_source = "tag"
+build_command = "python -m pip install build==1.2.2.post1 && python -m build --wheel ."
+commit_author = "mfd-intel-bot <mfd_intel_bot@intel.com>"
+commit_message = "chore: Release v{version}\n\nSigned-off-by: mfd-intel-bot <mfd_intel_bot@intel.com>"
 
 [tool.semantic_release.branches.main]
 match = ".*"
