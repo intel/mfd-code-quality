@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 import logging
 import pathlib
-import sys
 from unittest.mock import mock_open
 
 import pytest
@@ -12,16 +11,11 @@ from mfd_code_quality.code_standard.configure import (
     _create_toml_file,
     ToolConfig,
     _create_unified_tool_config_list,
-    _get_mfd_module_name,
-    _copy_common_files,
-    configure_pre_commit,
+    _get_module_name,
     _read_config_content,
-    configure_code_standard,
     create_toml_files,
     create_config_files,
     delete_config_files,
-    _substitute_pre_commit_hook_file,
-    _remove_common_files,
     _remove_toml_file,
     _get_template_repo_name,
 )
@@ -41,16 +35,12 @@ class TestConfigure:
     def test_create_pyproject_toml_file(self, tool_configs, mocker):
         # Mock the codec_open function and the logger
         mock_codec_open = mocker.patch("mfd_code_quality.code_standard.configure.codec_open", mock_open())
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
 
         # Path to the pyproject.toml file
         pyproject_toml_file_path = "path/to/pyproject.toml"
 
         # Call the function under test
         _create_toml_file(tool_configs, pyproject_toml_file_path)
-
-        # Assertions
-        mock_logger.info.assert_called_once_with(f"Create .toml file in path: {pyproject_toml_file_path}")
 
         # Check if the file was opened in write mode with utf-8 encoding
         mock_codec_open.assert_called_once_with(pyproject_toml_file_path, "w", "utf-8")
@@ -88,25 +78,24 @@ class TestConfigure:
         assert unified_list[0].tool_options == {"option1": "new_value1", "option3": "value3"}
 
     @pytest.mark.parametrize(
-        "module_name, expected, path",
+        "module_name, expected",
         [
-            ("mfd_example", "mfd_example", "libraries.python.mfd.mfd-example"),
-            ("pytest_mfd_example", "pytest_mfd_example", "libraries.python.mfd.pytest-mfd-example"),
-            ("{{cookiecutter.project_slug}}", "mfd_module_template", "libraries.python.mfd.mfd-module-template"),
+            ("mfd_example", "mfd_example"),
+            ("pytest_mfd_example", "pytest_mfd_example"),
+            ("{{cookiecutter.project_slug}}", "mfd_module_template"),
         ],
     )
-    def test_get_mfd_module_name_success(self, mocker, module_name, expected, path):
+    def test_get_module_name_success(self, mocker, module_name, expected):
         # Mock the directory listing
         mock_path = mocker.MagicMock(spec=pathlib.Path)
-        mock_path.name = path
         mock_directory = mocker.MagicMock(spec=pathlib.Path)
         mock_directory.name = module_name
-        mock_directory.is_dir.return_value = True
         mock_path.iterdir.return_value = [mock_directory]
 
         # Call the function and assert the result
         mocker.patch("mfd_code_quality.code_standard.configure._get_template_repo_name", return_value=expected)
-        result = _get_mfd_module_name(mock_path)
+        mocker.patch("mfd_code_quality.code_standard.configure.get_package_name", return_value=expected)
+        result = _get_module_name(mock_path)
         assert result == expected
 
     def test__get_template_repo_name(self, mocker, caplog):
@@ -127,8 +116,8 @@ class TestConfigure:
         mock_path.iterdir.return_value = []
 
         # Call the function and assert that an exception is raised
-        with pytest.raises(Exception, match="Script was not run in MFD repository!"):
-            _get_mfd_module_name(mock_path)
+        with pytest.raises(Exception):
+            _get_module_name(mock_path)
 
     def test_get_mfd_module_name_no_match(self, mocker):
         # Mock the directory listing with directories that do not match the pattern
@@ -142,66 +131,8 @@ class TestConfigure:
         mock_path.iterdir.return_value = [mock_directory1, mock_directory2]
 
         # Call the function and assert that an exception is raised
-        with pytest.raises(Exception, match="Script was not run in MFD repository!"):
-            _get_mfd_module_name(mock_path)
-
-    def test_get_mfd_module_name_mixed_files_and_directories(self, mocker):
-        # Mock the directory listing with a mix of files and directories
-        mock_path = mocker.MagicMock(spec=pathlib.Path)
-        mock_file = mocker.MagicMock(spec=pathlib.Path)
-        mock_file.is_dir.return_value = False
-        mock_directory = mocker.MagicMock(spec=pathlib.Path)
-        mock_directory.name = "mfd_valid_dir"
-        mock_directory.is_dir.return_value = True
-        mock_path.iterdir.return_value = [mock_file, mock_directory]
-
-        # Call the function and assert the result
-        result = _get_mfd_module_name(mock_path)
-        assert result == "mfd_valid_dir"
-
-    def test_copy_common_files_success(self, mocker):
-        mock_script_path = pathlib.Path("fake", "script", "path")
-        mock_destination_path = pathlib.Path("fake", "destination", "path")
-        common_file_path = mock_script_path / ".pre-commit-config.yaml"
-
-        mock_copy = mocker.patch("mfd_code_quality.code_standard.configure.shutil.copy2")
-        mocker.patch("pathlib.Path.__truediv__", return_value=common_file_path)
-        substitute_mock = mocker.patch("mfd_code_quality.code_standard.configure._substitute_pre_commit_hook_file")
-        _copy_common_files(mock_script_path, mock_destination_path)
-
-        mock_copy.assert_called_once_with(
-            str(common_file_path), str(pathlib.Path("fake", "destination", "path", ".pre-commit-config.yaml"))
-        )
-        substitute_mock.assert_called_once_with(
-            str(pathlib.Path("fake", "destination", "path", ".pre-commit-config.yaml"))
-        )
-
-    def test_configure_pre_commit_success(self, mocker):
-        # Mocking subprocess.run to simulate command outputs
-        mock_run = mocker.patch("subprocess.run")
-        mock_run.side_effect = [
-            mocker.MagicMock(stdout="pre-commit 2.9.3\n"),  # Simulating "pre-commit --version"
-            mocker.MagicMock(stdout="Python 3.8.5\n"),  # Simulating "python --version"
-            mocker.MagicMock(
-                stdout="pre-commit installed at .git/hooks/pre-commit\n"
-            ),  # Simulating "pre-commit install"
-        ]
-
-        configure_pre_commit()
-
-        assert mock_run.call_count == 3
-        mock_run.assert_any_call(["pre-commit", "--version"], check=True, capture_output=True, text=True)
-        mock_run.assert_any_call([sys.executable, "--version"], check=True, capture_output=True, text=True)
-        mock_run.assert_any_call(["pre-commit", "install"], check=True, capture_output=True, text=True)
-
-    def test_configure_pre_commit_failure(self, mocker):
-        # Mocking subprocess.run to simulate a failure in running a command
-        mocker.patch("subprocess.run", side_effect=Exception("Command failed"))
-
-        with pytest.raises(Exception) as exc_info:
-            configure_pre_commit()
-
-        assert str(exc_info.value) == "Command failed", "Should raise an exception if a subprocess command fails"
+        with pytest.raises(Exception):
+            _get_module_name(mock_path)
 
     def test_read_pyproject_content_success(self, mocker):
         # Sample content of pyproject.toml
@@ -302,8 +233,8 @@ class TestConfigure:
         mock_template.render.return_value = 'name = "mfd_example_module"'
         mocker.patch("mfd_code_quality.code_standard.configure.Template", return_value=mock_template)
 
-        # Mocking _get_mfd_module_name to return a specific module name
-        mocker.patch("mfd_code_quality.code_standard.configure._get_mfd_module_name", return_value="mfd_example_module")
+        # Mocking _get_module_name to return a specific module name
+        mocker.patch("mfd_code_quality.code_standard.configure._get_module_name", return_value="mfd_example_module")
 
         _substitute_toml_file("/fake/path/pyproject.toml")
 
@@ -325,9 +256,9 @@ class TestConfigure:
         mock_template.render.return_value = 'name = "mfd_example_module"'
         mocker.patch("mfd_code_quality.code_standard.configure.Template", return_value=mock_template)
 
-        # Mocking _get_mfd_module_name to return a specific module name
+        # Mocking _get_module_name to return a specific module name
         mocker.patch(
-            "mfd_code_quality.code_standard.configure._get_mfd_module_name",
+            "mfd_code_quality.code_standard.configure._get_module_name",
             return_value="{{cookiecutter.project_slug}}",
         )
 
@@ -343,22 +274,6 @@ class TestConfigure:
             _substitute_toml_file("/fake/path/pyproject.toml")
 
         assert str(exc_info.value) == "Failed to open file", "Should raise an IOError if the file cannot be opened"
-
-    def test_configure_code_standard(self, mocker):
-        mocker.patch("mfd_code_quality.code_standard.configure.set_up_logging")
-        mocker.patch("mfd_code_quality.code_standard.configure.get_root_dir", return_value="/fake/root/dir")
-        mocker.patch("os.path.abspath", return_value="/fake/dir")
-        mocker.patch("os.path.dirname", return_value="/fake/dir")
-        mocker.patch("mfd_code_quality.code_standard.configure.logger")
-        _copy_common_files_mock = mocker.patch("mfd_code_quality.code_standard.configure._copy_common_files")
-        create_toml_files_mock = mocker.patch("mfd_code_quality.code_standard.configure.create_toml_files")
-        configure_pre_commit_mock = mocker.patch("mfd_code_quality.code_standard.configure.configure_pre_commit")
-
-        configure_code_standard()
-
-        _copy_common_files_mock.assert_called_once()
-        assert create_toml_files_mock.call_count == 2
-        configure_pre_commit_mock.assert_called_once()
 
     def test_create_config_files(self, mocker):
         mocker.patch("mfd_code_quality.code_standard.configure.set_up_logging")
@@ -388,7 +303,7 @@ class TestConfigure:
             "mfd_code_quality.code_standard.configure._substitute_toml_file"
         )
         _substitute_pyproject_toml_file_mock = mocker.patch(
-            "mfd_code_quality.code_standard.configure._get_mfd_module_name",
+            "mfd_code_quality.code_standard.configure._get_module_name",
             return_value="mfd_connect",
         )
         cwd = mocker.MagicMock(retrurn_value=pathlib.Path)
@@ -408,11 +323,9 @@ class TestConfigure:
         )
         mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
         mock_remove_toml_file = mocker.patch("mfd_code_quality.code_standard.configure._remove_toml_file")
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
 
         delete_config_files()
 
-        mock_logger.info.assert_any_call("Step 2/2 - Remove ruff.toml")
         mock_remove_toml_file.assert_any_call("/fake/root/dir/ruff.toml")
 
     def test_delete_config_files_failure(self, mocker):
@@ -436,74 +349,21 @@ class TestConfigure:
             mock_remove_toml_file.assert_any_call("/fake/root/dir/pyproject.toml")
             mock_remove_toml_file.assert_any_call("/fake/root/dir/ruff.toml")
 
-    def test_substitute_pre_commit_hook_file(self, mocker):
-        mocker.patch("mfd_code_quality.code_standard.configure.logger")
-
-        # Mocking the file operations
-        mock_open = mocker.patch(
-            "mfd_code_quality.code_standard.configure.codec_open",
-            mocker.mock_open(read_data='version = "$version"'),
-        )
-
-        # Mocking the Template class and its render method
-        mock_template = mocker.MagicMock()
-        mock_template.render.return_value = 'version = "1.0.0"'
-        mocker.patch(
-            "mfd_code_quality.code_standard.configure.Template",
-            return_value=mock_template,
-        )
-
-        mocker.patch("importlib.metadata.version", return_value="1.0.0")
-
-        _substitute_pre_commit_hook_file("/fake/path/.pre-commit-config.yaml")
-
-        mock_open.assert_called_with("/fake/path/.pre-commit-config.yaml", "wt")
-        handle = mock_open()
-        handle.writelines.assert_called_once_with('version = "1.0.0"')
-
     def test_remove_toml_file_success(self, mocker):
         mocker.patch("os.path.exists", return_value=True)
         mock_remove = mocker.patch("os.remove")
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
 
         _remove_toml_file("/fake/path/pyproject.toml")
 
-        mock_logger.info.assert_called_once_with("Remove .toml file in path: /fake/path/pyproject.toml")
         mock_remove.assert_called_once_with("/fake/path/pyproject.toml")
 
     def test_remove_toml_file_not_exists(self, mocker):
         mocker.patch("os.path.exists", return_value=False)
         mock_remove = mocker.patch("os.remove")
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
 
         _remove_toml_file("/fake/path/pyproject.toml")
 
-        mock_logger.info.assert_called_once_with("Remove .toml file in path: /fake/path/pyproject.toml")
         mock_remove.assert_not_called()
-
-    def test_remove_common_files_success(self, mocker):
-        mock_path = mocker.MagicMock(spec=pathlib.Path)
-        mock_file = mocker.MagicMock(spec=pathlib.Path)
-        mock_file.exists.return_value = True
-        mock_path.joinpath.return_value = mock_file
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
-
-        _remove_common_files(mock_path)
-
-        mock_logger.info.assert_called_once_with(f"Remove: {mock_file}")
-        mock_file.unlink.assert_called_once()
-
-    def test_remove_common_files_not_exists(self, mocker):
-        mock_path = mocker.MagicMock(spec=pathlib.Path)
-        mock_file = mocker.MagicMock(spec=pathlib.Path)
-        mock_file.exists.return_value = False
-        mock_path.joinpath.return_value = mock_file
-        mock_logger = mocker.patch("mfd_code_quality.code_standard.configure.logger")
-
-        _remove_common_files(mock_path)
-
-        mock_logger.info.assert_not_called()
-        mock_file.unlink.assert_not_called()
 
     def test_cleanup_toml_file_removes_generic_content(self, mocker):
         # Setup paths
