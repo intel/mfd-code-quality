@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.2.1 (2025-08-25)
+
+### Bug Fixes
+- Added missing commit author and message for pyproject.toml
+  ([`f5eef9e`](https://github.com/intel/mfd-code-quality/commit/f5eef9e38bf8bd9d450d62b76b5c8dbfbfefa35f))
+
 ## v1.2.0 (2025-07-08)
 
 ### Continuous Integration
