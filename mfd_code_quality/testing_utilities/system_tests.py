@@ -12,7 +12,7 @@ import pytest
 from .consts import PYTEST_OK_STATUSES
 from ..utils import get_root_dir, set_up_logging, set_cwd
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mfd-code-quality.system_tests")
 
 
 def _run_system_tests() -> bool:
@@ -32,7 +32,7 @@ def _run_system_tests() -> bool:
 
     return_val = testing_run_outcome in PYTEST_OK_STATUSES
     if return_val:
-        logger.info("System tests check passed")
+        logger.info("System tests check PASSED.")
 
     return return_val
 
