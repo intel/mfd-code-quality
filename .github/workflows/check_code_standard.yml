@@ -1,0 +1,30 @@
+name: Check Code Standard
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+env:
+  SOURCE_PATH: 'src'
+  VIRTUALENV_PATH: 'virtualenv'
+
+jobs:
+  run_check_standard:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ['3.10', '3.13']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          path: current_repo
+      - uses: ./current_repo/.github/prepare_test_env
+        with:
+          PYTHON_VERSION: ${{ matrix.python_version }}
+      - name: Run mfd-code-standard
+        shell: bash
+        run: |
+          source ${{ github.workspace }}/${{ env.VIRTUALENV_PATH }}/*/activate
+          mfd-code-standard --project-dir ${{ github.workspace }}/${{ env.SOURCE_PATH }}

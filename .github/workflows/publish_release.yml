@@ -1,0 +1,67 @@
+name: Publish Release
+
+on:
+  workflow_call:
+    secrets:
+      GH_TOKEN:
+        description: 'GitHub token for authentication'
+        required: true
+    inputs:
+      RUNS_ON:
+        required: false
+        type: string
+        default: "ubuntu-latest"
+      REPOSITORY_NAME:
+        description: 'Repository name'
+        required: false
+        type: string
+      BRANCH_NAME:
+        description: 'Branch name to checkout'
+        required: true
+        type: string
+
+jobs:
+  push_release:
+    runs-on: ${{ inputs.RUNS_ON }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-tags: true
+        fetch-depth: 0
+        token: ${{ secrets.GH_TOKEN }}
+        ref: ${{ inputs.BRANCH_NAME }}
+        repository: ${{ inputs.REPOSITORY_NAME }}
+    - name: Run mfd-create-config-files
+      run: |
+        pip install -r requirements-dev.txt
+        pip install .
+        mfd-create-config-files --project-dir .
+    - name: Run python-semantic-release
+      id: semantic_release
+      uses: python-semantic-release/python-semantic-release@v10.3.1
+      with:
+        build: false
+        vcs_release: true
+        push: true
+        commit: false
+        github_token: ${{ secrets.GH_TOKEN }}
+        strict: true
+        verbosity: 2
+    - name: Get old/new versions from semantic-release
+      run: |
+        echo "PREV_VERSION=${{ steps.semantic_release.outputs.previous_version }}" >> $GITHUB_ENV
+        echo "NEW_VERSION=${{ steps.semantic_release.outputs.version }}" >> $GITHUB_ENV
+    - name: Run mfd-delete-config-files
+      run: mfd-delete-config-files --project-dir .
+    - name: Update version in pyproject.toml
+      run: |
+        sed "s/$PREV_VERSION/$NEW_VERSION/" -i pyproject.toml
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "mfd_intel_bot@intel.com"
+        git config --local user.name "mfd-intel-bot"
+        git add pyproject.toml CHANGELOG.md
+        git commit -s -m "chore: Release v$NEW_VERSION"
+        git tag -f v$NEW_VERSION
+        git push origin ${{ inputs.BRANCH_NAME }} --force
+        git push origin v$NEW_VERSION --force
