@@ -1,6 +1,6 @@
 pytest >= 7.2.1, < 9
 pytest-cov ~= 5.0.0
-pytest-xdist ~= 3.6.1
+pytest-xdist ~= 3.8.0
 coverage ~= 7.3.0
 diff-cover >= 8.0.3, < 9
 ansicolors~=1.1
