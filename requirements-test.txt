@@ -1,4 +1,4 @@
 -r requirements.txt  # Ensure tests dependencies are automatically included
 
 # Put dependencies required for testing the module here
-pytest-mock ~= 3.14
+pytest-mock ~= 3.15
