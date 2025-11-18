@@ -3,7 +3,8 @@
 
 # MFD Code Quality
 
-This module provides a set of methods for checking code quality.\
+This module provides a set of methods for checking code quality.
+
 **Along with the module installation, additional CLI tools appear in your environment.**
 
 ## Usage
@@ -56,7 +57,7 @@ If command requires configuration, the config file will be automatically created
 
 ### Configuration files
 
-We are using 2 configuration files (created/modified/removed automatically):
+We are using two configuration files (created/modified/removed automatically):
 
 * `ruff.toml` - for ruff configuration
 
