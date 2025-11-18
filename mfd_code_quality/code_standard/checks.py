@@ -58,11 +58,21 @@ def _get_available_code_standard_module() -> str:
     :raises Exception: When no code standard module is available
     """
     code_standard_modules = ["ruff", "flake8"]
-    pip_list = run((sys.executable, "-m", "pip", "list"), capture_output=True, text=True, cwd=get_root_dir())
-    for code_standard_module in code_standard_modules:
-        if f"{code_standard_module} " in pip_list.stdout:
-            logger.info(f"{code_standard_module.capitalize()} will be used for code standard check.")
-            return code_standard_module
+    commands = [("uv", "pip", "list"), (sys.executable, "-m", "pip", "list")]
+    for cmd in commands:
+        try:
+            pip_list = run(cmd, capture_output=True, text=True, cwd=get_root_dir())
+        except Exception as e:  # noqa
+            logger.debug(f"Error occurred while running {cmd}:\n{e}")
+            continue
+
+        if pip_list.returncode != 0:
+            continue
+
+        for code_standard_module in code_standard_modules:
+            if f"{code_standard_module} " in pip_list.stdout:
+                logger.info(f"{code_standard_module.capitalize()} will be used for code standard check.")
+                return code_standard_module
 
     raise Exception("No code standard module is available! [flake8 or ruff]")
 

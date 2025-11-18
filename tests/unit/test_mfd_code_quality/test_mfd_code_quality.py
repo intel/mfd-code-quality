@@ -71,7 +71,12 @@ def test_run_all_checks_with_flake8(mock_dependencies):
     )
 
 
-def test_log_help_info_logs_commands(caplog):
+def test_log_help_info_logs_commands(caplog, mocker):
+    """log_help_info should log available commands without parsing real CLI args."""
     caplog.set_level("INFO")
+    # Prevent argparse in set_up_logging/get_parsed_args from seeing pytest/IDE args.
+    mocker.patch("mfd_code_quality.utils.get_parsed_args", return_value=mocker.Mock(verbose=False))
+
     log_help_info()
+
     assert "Available commands:" in caplog.text
